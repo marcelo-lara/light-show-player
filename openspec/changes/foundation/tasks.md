@@ -18,6 +18,8 @@
 - [x] **Spike**: Benchmark the scheduler jitter under 80% CPU load to verify <10ms tolerance.
 - [x] Implement `DmxFileLoader` with binary validation and SAB allocation.
 - [x] Create the "Steering" logic for smooth clock synchronization.
+- [x] Implement Master Election logic in `SocketServer` (assign master on `PLAY`, transfer explicitly).
+- [x] Enforce Master-only role for `SYNC` intents (reject `SYNC` from non-master sockets).
 
 ## Phase 3: Web UI (Frontend)
 - [x] Build React/Vite scaffolding (if not fully completed in Phase 1).
@@ -28,6 +30,9 @@
 - [x] Implement Dark Mode theme: `#9000dd` accent, 0px border-radius, max 0.5em padding.
 - [x] Create Asset Selection view using the manifest provided by `DiscoveryService`.
 - [x] Create UI controls (Play/Pause/Seek/Load).
+- [x] Update frontend to respect `status.isController` flag (Monitor Mode).
+- [x] Disable steering `SYNC` emissions when operating in Monitor Mode.
+- [x] Display current control status (Master vs Monitor) in the UI Event Log/Diagnostics panel.
 
 ## Phase 5: Verification & Smoke Test
 - [x] Bring up the application stack using `docker-compose up --build`.

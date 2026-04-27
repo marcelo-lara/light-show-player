@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import WaveSurfer from 'wavesurfer.js';
 import { useWebSocket } from './hooks/useWebSocket';
+import { StatusPayload } from '../../shared/types/intents';
 import { Box, Button, Typography, Select, MenuItem, FormControl, Chip, Grid } from '@mui/material';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -42,6 +43,9 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [startupOffsetMs, setStartupOffsetMs] = useState<number | null>(null);
+
+  const statusRef = useRef<StatusPayload | null>(null);
+  statusRef.current = status;
 
   const waveSurferRef = useRef<WaveSurfer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -86,6 +90,19 @@ export default function App() {
     });
 
     ws.on('interaction', () => {
+      // Allow seeking in monitor mode if we're IDLE or LOADED?
+      // Actually if we're not controller, we probably shouldn't seek while PLAYING
+      // since that might mess with local playback. Or maybe we can't seek the backend.
+      // Let's only emit SEEK if we're controller or allowed. But wait, SEEK sets the playhead.
+      // Let's enforce that we only send SEEK if we're the controller or state is not PLAYING.
+      // The task says "Disable steering SYNC emissions when operating in Monitor Mode", but maybe SEEK is fine when loaded.
+      // We will let the backend reject it if necessary, but we should definitely prevent it if we know we're monitor and PLAYING.
+      const currentStatus = statusRef.current;
+      if (currentStatus && !currentStatus.isController && currentStatus.state === 'PLAYING') {
+         // Optionally reset playhead to backend time if someone clicks
+         // For now, doing nothing is fine.
+         return;
+      }
       const timeMs = ws.getCurrentTime() * 1000;
       sendIntent({ type: 'SEEK', payload: { time: timeMs } });
     });
@@ -161,6 +178,7 @@ export default function App() {
 
   useEffect(() => {
     if (!isSocketOpen || state !== 'PLAYING') return;
+    if (status && !status.isController) return;
 
     const sync = setInterval(() => {
       const timeMs = waveSurferRef.current ? waveSurferRef.current.getCurrentTime() * 1000 : 0;
@@ -168,7 +186,7 @@ export default function App() {
     }, 1000);
 
     return () => clearInterval(sync);
-  }, [isSocketOpen, sendIntent, state]);
+  }, [isSocketOpen, sendIntent, state, status]);
 
   useEffect(() => {
     if (!isSocketOpen) return;
@@ -360,7 +378,17 @@ export default function App() {
         </Grid>
         <Grid size={4}>
           <Box sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'grey.700', height: 96, p: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.5 }}>
-            <Typography color="text.secondary" variant="body2">Event Log</Typography>
+            <Typography color="text.secondary" variant="body2">
+              Event Log
+              {status && (
+                <Chip
+                  label={status.isController ? 'MASTER' : 'MONITOR'}
+                  color={status.isController ? 'success' : 'default'}
+                  size="small"
+                  sx={{ ml: 1, height: 16, fontSize: '0.65rem' }}
+                />
+              )}
+            </Typography>
             <Typography variant="caption" color="text.secondary">
               Last Ack: {lastAck ? `${lastAck.intentType} ${lastAck.status}` : 'n/a'}
             </Typography>

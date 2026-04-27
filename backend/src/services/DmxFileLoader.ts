@@ -80,6 +80,13 @@ export class DmxFileLoader {
 
      // Allocate SharedArrayBuffer: frameCount * (timestamp + 512 channels)
      const sab = new SharedArrayBuffer(frameCount * DmxFileLoader.FRAME_SIZE);
+
+     // Memory Limit: Shows are capped at 15 minutes (45,000 frames @ 50fps).
+     const maxFrames = 45000;
+     if (frameCount > maxFrames) {
+       throw new Error(`DMX file exceeds maximum allowed frames: ${frameCount} > ${maxFrames}`);
+     }
+
      const sabView = new Uint8Array(sab);
 
      // Copy raw frame data directly (skip 32-byte header)
