@@ -1,27 +1,31 @@
 version: '3.8'
 
 services:
-  light-show-player:
+  backend:
     build:
       context: .
-      dockerfile: Dockerfile
-    container_name: light-show-player
+      dockerfile: backend/Dockerfile
     ports:
-      - "3000:3000"      # Web UI & WebSockets
-      - "6454:6454/udp"  # ArtNet UDP
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - ./data:/data
+      - "3001:3001"
+      - "6454:6454/udp"
     environment:
-      - NODE_ENV=development
+      - PORT=3001
       - DMX_NODE_IP=192.168.10.221
-      - ARTNET_NET=0
-      - ARTNET_SUBNET=0
       - ARTNET_UNIVERSE=0
-    restart: unless-stopped
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "10mb"
-        max-file: "3"
+    volumes:
+      - ./data:/data
+    restart: always
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:5173"
+    environment:
+      - VITE_BACKEND_URL=ws://localhost:3001
+    restart: always
+
+networks:
+  default:
+    name: light-show-network

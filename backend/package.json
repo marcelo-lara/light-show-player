@@ -1,0 +1,21 @@
+{
+  "name": "light-show-player-backend",
+  "version": "1.0.0",
+  "description": "DMX/ArtNet Player Backend",
+  "type": "module",
+  "main": "dist/backend/src/index.js",
+  "scripts": {
+    "start": "node dist/backend/src/index.js",
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/ws": "^8.5.10",
+    "typescript": "^5.3.3",
+    "tsx": "^4.7.0"
+  }
+}

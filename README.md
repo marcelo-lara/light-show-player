@@ -3,6 +3,12 @@ DMX player module to the [AI Light Show](https://github.com/marcelo-lara/ai-ligh
 
 A dedicated playback engine bridging browser-based audio playback with network-based DMX hardware using professional-grade timing and synchronization.
 
+## Global Directives
+
+- **File Size Limit:** Keep individual files under 120 lines.
+- **Modular Organization:** Split larger functionalities into smaller files organized under folders named after their intent/purpose.
+- **LLM-Friendly Indexing:** Maintain an index file in each folder summarizing the purpose and contents of each file for easy navigation and understanding.
+
 ## Architecture: The "Buffered-Follower"
 
 - **Web UI (Master Clock):** A React/Vite browser application loads the mp3 and directs the show. It sends playback `Intents` via WebSocket, broadcasting exact `SYNC` timecodes every 1 second and a `HEARTBEAT` every 333ms.
@@ -29,3 +35,13 @@ A dedicated playback engine bridging browser-based audio playback with network-b
 
 ## Development
 This module is strictly developed and deployed via Docker to ensure network and timing consistency across environments.
+
+### Service Ports
+- **Frontend (Web UI):** http://localhost:3000
+- **Backend (WebSockets/API):** ws://localhost:3001
+- **ArtNet (UDP):** Port 6454 (Outbound to DMX Node)
+
+### Build & Run
+```bash
+docker compose up --build -d
+```
