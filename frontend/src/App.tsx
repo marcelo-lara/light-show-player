@@ -89,6 +89,32 @@ export default function App() {
       setDuration(ws.getDuration());
     });
 
+    // Inject custom scrollbar styles into the shadow DOM
+    // WaveSurfer creates a wrapper div with a shadowRoot inside the container
+    const shadowHost = containerRef.current?.firstElementChild;
+    const shadowRoot = shadowHost?.shadowRoot;
+    
+    if (shadowRoot) {
+      const style = document.createElement('style');
+      style.textContent = `
+        ::-webkit-scrollbar {
+          width: 0.5em;
+          height: 0.5em;
+        }
+        ::-webkit-scrollbar-track {
+          background: #000;
+        }
+        ::-webkit-scrollbar-thumb {
+          background: #888;
+          border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+          background: #aaa;
+        }
+      `;
+      shadowRoot.appendChild(style);
+    }
+
     ws.on('interaction', () => {
       // Allow seeking in monitor mode if we're IDLE or LOADED?
       // Actually if we're not controller, we probably shouldn't seek while PLAYING
@@ -261,14 +287,16 @@ export default function App() {
   };
 
   return (
-    <Box sx={{ minHeight: '100vh', bgcolor: 'background.default', color: 'text.primary', fontFamily: 'monospace' }}>
+    <Box sx={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', bgcolor: 'background.default', color: 'text.primary', fontFamily: 'monospace' }}>
       <Box sx={{ display: 'flex', alignItems: 'center', borderBottom: 1, borderColor: 'primary.main', p: 1 }}>
         <FormControl sx={{ mr: 2, minWidth: 120 }}>
           <Select
             value={selectedSong}
             onChange={(e) => setSelectedSong(e.target.value)}
             displayEmpty
-            sx={{ bgcolor: 'background.paper', color: 'text.primary' }}
+            variant="standard"
+            disableUnderline
+            sx={{ color: 'text.primary', '& .MuiSvgIcon-root': { color: 'text.primary' } }}
           >
             <MenuItem value="">
               <Typography>Select Song</Typography>
@@ -287,7 +315,9 @@ export default function App() {
             onChange={(e) => setSelectedShow(e.target.value)}
             displayEmpty
             disabled={!selectedSong}
-            sx={{ bgcolor: 'background.paper', color: 'text.primary' }}
+            variant="standard"
+            disableUnderline
+            sx={{ color: 'text.primary', '& .MuiSvgIcon-root': { color: 'text.primary' } }}
           >
             <MenuItem value="">
               <Typography>Select Show</Typography>
@@ -310,18 +340,50 @@ export default function App() {
 
         <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
           <Chip
-            label={state}
-            color={state === 'PLAYING' ? 'success' : 'default'}
+            label="SERVER"
+            sx={{
+              bgcolor: readyState === WebSocket.OPEN ? 'success.main' : readyState === WebSocket.CONNECTING ? 'warning.main' : 'error.main',
+              color: '#fff',
+              fontWeight: 'bold',
+            }}
             size="small"
           />
-          <Typography variant="body2" color="text.secondary">{state}</Typography>
+
+          <Box sx={{ position: 'relative', width: '4em', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'transparent', overflow: 'hidden' }}>
+            {/* Base line for gauge */}
+            <Box sx={{ position: 'absolute', width: '100%', height: '2px', bgcolor: 'grey.800' }} />
+            {/* Dynamic drift bar */}
+            {liveDriftMs !== null && (
+              <Box sx={{
+                position: 'absolute',
+                height: '2px',
+                bgcolor: 'error.main',
+                width: `${Math.min(50, Math.abs((liveDriftMs / 100) * 50))}%`,
+                left: liveDriftMs < 0 ? `calc(50% - ${Math.min(50, Math.abs((liveDriftMs / 100) * 50))}%)` : '50%',
+              }} />
+            )}
+            {/* Overlaid numeric text */}
+            <Typography variant="caption" sx={{ zIndex: 1, color: '#fff', textShadow: '0px 0px 4px rgba(0,0,0,0.8)' }}>
+              {liveDriftMs !== null ? `${Math.round(liveDriftMs)}ms` : '-'}
+            </Typography>
+          </Box>
+
+          <Chip
+            label={state === 'LOADED' ? 'READY' : state}
+            sx={{
+              bgcolor: (state === 'LOADED' || state === 'PLAYING') ? 'success.main' : 'grey.600',
+              color: '#fff',
+              fontWeight: 'bold'
+            }}
+            size="small"
+          />
         </Box>
       </Box>
 
       <Box sx={{ p: 1 }}>
         <Box
           ref={containerRef}
-          sx={{ width: '100%', bgcolor: 'background.paper', border: 1, borderColor: 'grey.700' }}
+          sx={{ width: '100%', bgcolor: 'background.paper' }}
         />
       </Box>
 
@@ -330,38 +392,29 @@ export default function App() {
           <Button
             onClick={handleLoad}
             disabled={!selectedSong || !isSocketOpen}
-            variant="contained"
+            variant="text"
             color="primary"
-            startIcon={<FileUploadIcon />}
+            sx={{ minWidth: 0, p: 1 }}
           >
-            Load
+            <FileUploadIcon />
           </Button>
           <Button
-            onClick={handlePlay}
-            disabled={state === 'IDLE' || !isSocketOpen}
-            variant="contained"
-            color="success"
-            startIcon={<PlayArrowIcon />}
+            onClick={state === 'PLAYING' ? handlePause : handlePlay}
+            disabled={(state !== 'IDLE' && state !== 'LOADED' && state !== 'PLAYING') || !isSocketOpen}
+            variant="text"
+            color={state === 'PLAYING' ? "warning" : "success"}
+            sx={{ minWidth: 0, p: 1 }}
           >
-            Play
-          </Button>
-          <Button
-            onClick={handlePause}
-            disabled={state !== 'PLAYING' || !isSocketOpen}
-            variant="contained"
-            color="warning"
-            startIcon={<PauseIcon />}
-          >
-            Pause
+            {state === 'PLAYING' ? <PauseIcon sx={{ fontSize: '1.75em' }} /> : <PlayArrowIcon sx={{ fontSize: '1.75em' }} />}
           </Button>
           <Button
             onClick={handleStop}
             disabled={state === 'IDLE' || !isSocketOpen}
-            variant="contained"
+            variant="text"
             color="error"
-            startIcon={<StopIcon />}
+            sx={{ minWidth: 0, p: 1 }}
           >
-            Stop
+            <StopIcon />
           </Button>
         </Box>
 
@@ -370,14 +423,14 @@ export default function App() {
         </Typography>
       </Box>
 
-      <Grid container sx={{ p: 1 }} spacing={1}>
-        <Grid size={4}>
-          <Box sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'grey.700', height: 96, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <Grid container sx={{ p: 1, flexGrow: 1, minHeight: 0 }} spacing={1}>
+        <Grid size={4} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ bgcolor: 'background.paper', flexGrow: 1, overflowY: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             <Typography color="text.secondary" variant="body2">DMX Monitor</Typography>
           </Box>
         </Grid>
-        <Grid size={4}>
-          <Box sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'grey.700', height: 96, p: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.5 }}>
+        <Grid size={4} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ bgcolor: 'background.paper', flexGrow: 1, overflowY: 'auto', p: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.5 }}>
             <Typography color="text.secondary" variant="body2">
               Event Log
               {status && (
@@ -397,8 +450,8 @@ export default function App() {
             </Typography>
           </Box>
         </Grid>
-        <Grid size={4}>
-          <Box sx={{ bgcolor: 'background.paper', border: 1, borderColor: 'grey.700', height: 96, p: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.5 }}>
+        <Grid size={4} sx={{ display: 'flex', flexDirection: 'column' }}>
+          <Box sx={{ bgcolor: 'background.paper', flexGrow: 1, overflowY: 'auto', p: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 0.5 }}>
             <Typography color="text.secondary" variant="body2">Diagnostics</Typography>
             <Typography variant="caption" color="text.secondary">Frontend: {formatTime(currentTime)}</Typography>
             <Typography variant="caption" color="text.secondary">Backend: {formatTime((status?.backendTimeMs ?? 0) / 1000)}</Typography>
