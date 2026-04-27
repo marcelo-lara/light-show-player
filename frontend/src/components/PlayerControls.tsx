@@ -32,15 +32,6 @@ export function PlayerControls() {
           <FileUploadIcon />
         </Button>
         <Button
-          onClick={state === 'PLAYING' ? handlePause : handlePlay}
-          disabled={(state !== 'IDLE' && state !== 'LOADED' && state !== 'PLAYING') || !isSocketOpen}
-          variant="text"
-          color={state === 'PLAYING' ? 'warning' : 'success'}
-          sx={{ minWidth: 0, p: 1 }}
-        >
-          {state === 'PLAYING' ? <PauseIcon sx={{ fontSize: '1.75em' }} /> : <PlayArrowIcon sx={{ fontSize: '1.75em' }} />}
-        </Button>
-        <Button
           onClick={handleStop}
           disabled={state === 'IDLE' || !isSocketOpen}
           variant="text"
@@ -48,6 +39,15 @@ export function PlayerControls() {
           sx={{ minWidth: 0, p: 1 }}
         >
           <StopIcon />
+        </Button>
+        <Button
+          onClick={state === 'PLAYING' ? handlePause : handlePlay}
+          disabled={(state !== 'IDLE' && state !== 'LOADED' && state !== 'PLAYING' && state !== 'PAUSED') || !isSocketOpen}
+          variant="text"
+          color={state === 'PLAYING' ? 'warning' : 'success'}
+          sx={{ minWidth: 0, p: 1 }}
+        >
+          {state === 'PLAYING' ? <PauseIcon sx={{ fontSize: '1.75em' }} /> : <PlayArrowIcon sx={{ fontSize: '1.75em' }} />}
         </Button>
       </Box>
 

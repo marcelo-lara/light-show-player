@@ -18,11 +18,20 @@ export default function App() {
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
   const [startupOffsetMs, setStartupOffsetMs] = useState<number | null>(null);
+  const [liveDriftMs, setLiveDriftMs] = useState<number | null>(null);
 
   const waveformRef = useRef<WaveformHandle>(null);
   const scheduledPlayTimerRef = useRef<number | null>(null);
   const isSocketOpen = readyState === 1 /* WebSocket.OPEN */;
-  const liveDriftMs = status ? currentTime * 1000 - status.backendTimeMs : null;
+
+  useEffect(() => {
+    if (status) {
+      const timeMs = waveformRef.current ? waveformRef.current.getCurrentTime() * 1000 : currentTime * 1000;
+      setLiveDriftMs(timeMs - status.backendTimeMs);
+    } else {
+      setLiveDriftMs(null);
+    }
+  }, [status]); // Compare EXACTLY when we receive the status from the server
 
   const clearScheduledPlay = useCallback(() => {
     if (scheduledPlayTimerRef.current !== null) {

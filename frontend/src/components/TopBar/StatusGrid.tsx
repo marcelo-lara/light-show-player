@@ -10,16 +10,6 @@ export function StatusGrid() {
 
   return (
     <Box sx={{ ml: 'auto', display: 'flex', alignItems: 'center', gap: 2 }}>
-      <Chip
-        label="SERVER"
-        sx={{
-          bgcolor: readyState === 1 /* WebSocket.OPEN */ ? 'success.main' : readyState === 0 /* WebSocket.CONNECTING */ ? 'warning.main' : 'error.main',
-          color: '#fff',
-          fontWeight: 'bold',
-        }}
-        size="small"
-      />
-
       <Box sx={{ position: 'relative', width: '4em', height: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center', bgcolor: 'transparent', overflow: 'hidden' }}>
         {/* Base line for gauge */}
         <Box sx={{ position: 'absolute', width: '100%', height: '2px', bgcolor: 'grey.800' }} />
@@ -48,6 +38,16 @@ export function StatusGrid() {
         }}
         size="small"
       />
+        <Chip
+        label="SERVER"
+        sx={{
+          bgcolor: readyState === 1 /* WebSocket.OPEN */ ? 'success.main' : readyState === 0 /* WebSocket.CONNECTING */ ? 'warning.main' : 'error.main',
+          color: '#fff',
+          fontWeight: 'bold',
+        }}
+        size="small"
+      />
+
     </Box>
   );
 }
