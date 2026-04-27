@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  light-show-player:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: light-show-player
+    ports:
+      - "3000:3000"      # Web UI & WebSockets
+      - "6454:6454/udp"  # ArtNet UDP
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - ./data:/data
+    environment:
+      - NODE_ENV=development
+      - DMX_NODE_IP=192.168.10.221
+      - ARTNET_NET=0
+      - ARTNET_SUBNET=0
+      - ARTNET_UNIVERSE=0
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10mb"
+        max-file: "3"
