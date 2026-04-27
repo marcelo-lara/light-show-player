@@ -18,10 +18,16 @@ All communication occurs via WebSocket. Every message follows this schema:
 
 ```typescript
 interface Intent<T = any> {
-  type: 'PLAY' | 'PAUSE' | 'STOP' | 'SEEK' | 'SYNC' | 'LOAD' | 'LIST_ASSETS' | 'HEARTBEAT';
+  type: 'PLAY' | 'PAUSE' | 'STOP' | 'SEEK' | 'SYNC' | 'LOAD' | 'LIST_ASSETS' | 'HEARTBEAT' | 'GET_STATUS';
   payload: T;
   timestamp: number; // UI Master Time in ms
 }
+
+// Payload for 'PLAY'
+type PlayPayload = {
+  startAtTime: number; // agreed UI master-clock time to begin playback
+  currentTime: number; // UI playhead position when PLAY was requested
+};
 
 // Payload for 'LOAD'
 type LoadPayload = { songFile: string; dmxFile: string };
@@ -31,15 +37,42 @@ type LoadPayload = { songFile: string; dmxFile: string };
 
 ```typescript
 interface ServerEvent<T = any> {
-  type: 'ACK' | 'STATE_CHANGE' | 'ASSETS_MANIFEST' | 'WARNING' | 'ERROR';
+  type: 'ACK' | 'STATE_CHANGE' | 'ASSETS_MANIFEST' | 'STATUS' | 'WARNING' | 'ERROR';
   payload: T;
   timestamp: number; // Server's internal precision timestamp
 }
+
+type StatusPayload = {
+  state: 'IDLE' | 'LOADED' | 'PLAYING' | 'PAUSED';
+  backendTimeMs: number;
+  currentFrame: number;
+  totalFrames: number;
+  speedFactor: number;
+  scheduledStartAtTime: number | null;
+  backendStartLagMs: number | null;
+  lastSyncDriftMs: number | null;
+  isController: boolean;
+};
 ```
 
 ## 3. Synchronization Strategy: The "Steering" Algorithm
 
 Instead of hard-resetting the backend time every 10 seconds (which causes visible lighting glitches), the backend implements a **Variable Speed Oscillator**.
+
+### 3.1 Coordinated Start
+
+This system must not rely on an "immediate PLAY" assumption. On `PLAY`, the UI and backend coordinate a shared future start time, typically about **100ms after** the user clicks the button.
+
+1.  **Start Intent**: UI sends `PLAY` with both the current UI playhead and a target `startAtTime` on the UI master clock.
+2.  **Arm Both Sides**: Frontend audio playback and backend DMX playback both wait for that agreed target time instead of starting independently as soon as they process the click.
+3.  **Start Guarantee**: The backend remains a follower of the UI clock, but the coordinated future start removes the large initial phase error that would otherwise need a hard correction after playback begins.
+4.  **Master Election by PLAY**: If multiple frontends are connected, the frontend that issues `PLAY` becomes the active master controller for timing.
+5.  **Monitor Mode for Others**: All non-master frontends remain connected in monitor mode. They may render transport state, diagnostics, and asset information, but they must not emit timing-critical intents such as `SYNC` updates while another master is active.
+6.  **Explicit Control Transfer**: Master authority is transferred only by an explicit operator action, with `PLAY` serving as the control-takeover intent. This avoids multiple frontends competing to steer the backend clock.
+
+### 3.2 Drift Steering After Start
+
+Once both sides have started on the same agreed time base, the backend uses steering for residual drift correction.
 
 1.  **UI Report**: UI sends `{ type: 'SYNC', payload: { currentTime: 10500 } }` every **1 second**.
 2.  **Drift Calculation**: Backend compares its internal `playbackPosition` with `currentTime`.
@@ -47,6 +80,12 @@ Instead of hard-resetting the backend time every 10 seconds (which causes visibl
     - If BE is behind: Increase playback speed by 0.5% until caught up.
     - If BE is ahead: Decrease playback speed by 0.5%.
     - If Delta > 500ms: Perform a hard "Seek" jump.
+
+The UI may also poll `GET_STATUS` to retrieve backend timing diagnostics for operator visibility without changing playback state.
+
+The coordinated start and the steering loop serve different purposes: the coordinated start eliminates gross startup offset, and the steering loop trims ongoing clock drift during playback.
+
+When multiple frontends are attached, the steering loop must accept time updates only from the current master frontend. Monitor-mode clients must not perturb backend playback by sending competing `SYNC` samples.
 
 ## 4. DMX Scheduler & State Machine
 
@@ -65,6 +104,8 @@ graph TD
 - **SEEK**: Jumps to target frame but preserves current state (does not force playback).
 - **STOP**: Resets playhead to `0:00`, triggers a Blackout frame burst, and rests in `LOADED` (does not clear memory).
 - **LOCKING**: `LOAD` is completely rejected/locked while in `PLAYING` to prevent accidental show drops.
+- **PLAY Start Semantics**: `PLAY` arms playback for a shared future timestamp rather than allowing frontend and backend to begin on unrelated local processing times.
+- **Master Ownership**: During playback, exactly one frontend owns timing control. Other frontends are monitor-only until they explicitly take control via a later `PLAY` action.
 
 ### 4.2 Scheduler Operation
 
@@ -128,13 +169,16 @@ The UI is divided into a **Fixed Header** (Controls) and a **Content Lane** (Dat
    - `Song Name`: Clickable label that opens a dropdown of available audio files from `/data/songs`.
    - `Show Name`: Clickable label that filters available `.dmx` files based on the selected `Song Name`.
      - **No Show Logic**: If the selected song has no matching `.dmx` files, the label displays a warning: "*no shows available*". The song can still be loaded and played, but DMX output remains silent.
+   - **Auto-Load**: By default, the first available song and its first show are automatically selected and loaded on startup.
 2. **Middle Row**: Full-width **wavesurfer.js** container showing the audio waveform.
 3. **Bottom Row**:
    - `Controls`: [Stop] (Blackout + Reset to 0), [Play/Pause Toggle].
    - `Time Display`: High-visibility clock in `0:00.00` format.
 
 **Content Lane (Three Columns):**
-- Three equal-width columns as placeholders for future DMX monitoring, logs, or visualization.
+- DMX Monitor placeholder.
+- Event Log placeholder for protocol acknowledgements, transport state, and master/monitor status.
+- Diagnostics panel showing frontend time, backend time, live drift, startup offset, backend start lag, and whether the current UI is master or monitor.
 
 ### 7.2 Styling & Theme
 - **Palette**: Pure Dark Mode; Accent: `#9000dd`.

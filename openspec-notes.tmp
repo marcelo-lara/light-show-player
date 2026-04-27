@@ -1,0 +1,28 @@
+# UI Polish Tweaks
+
+## Global Design Rules
+- Remove borders from UI elements unless strictly required (e.g., input active states).
+
+## Top Row (Left)
+- Remove border and background color from Song and Show dropdowns ("naked" dropdowns).
+- Ensure dropdown chevron matches the selected text color.
+
+## Top Row (Right)
+- Redundant "playback state" text removed.
+- **Server Chip:** Always displays "SERVER". Uses background color for state (🟢 OPEN/Green, 🟡 CONNECTING/Yellow, 🔴 CLOSED/Red).
+- **Live Drift Gauge:** 4em wide, 2px red bar originating from center `0`. Left = negative drift, right = positive drift. Overlay white text with the ms value.
+- **State Chip:** Displays state text. Background green if READY/PLAYING. Gray for IDLE/other.
+
+## Waveform Area
+- Remove the encompassing border from the wavesurfer container.
+- **Scrollbar:** Custom 0.5em scrollbar track (black track, gray thumb).
+
+## Playback Controls
+- Icon-only transport (remove text from buttons).
+- Combine Play and Pause into a single toggle button.
+- Make the Play/Pause button 0.25em larger than Load/Stop.
+
+## Bottom Area (3 Columns)
+- Remove the borders from the 3 column containers (Diagnostics, DMX Monitor, Event Log).
+- Allow the columns to expand and use all remaining vertical height.
+- Add an auto-hiding vertical scrollbar to each column independently if their content overflows.

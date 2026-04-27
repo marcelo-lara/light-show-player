@@ -2,7 +2,7 @@
  * Intent Protocol definitions as per OpenSpec Design.
  */
 
-export type IntentType = 'PLAY' | 'PAUSE' | 'STOP' | 'SEEK' | 'SYNC' | 'LOAD' | 'LIST_ASSETS' | 'HEARTBEAT';
+export type IntentType = 'PLAY' | 'PAUSE' | 'STOP' | 'SEEK' | 'SYNC' | 'LOAD' | 'LIST_ASSETS' | 'HEARTBEAT' | 'GET_STATUS';
 
 export interface Intent<T = any> {
   type: IntentType;
@@ -15,6 +15,11 @@ export interface LoadPayload {
   dmxFile: string;
 }
 
+export interface PlayPayload {
+  startAtTime: number;
+  currentTime: number;
+}
+
 export interface SyncPayload {
   currentTime: number;
 }
@@ -23,6 +28,7 @@ export type ServerEventType =
   | 'ACK' 
   | 'STATE_CHANGE' 
   | 'ASSETS_MANIFEST' 
+  | 'STATUS'
   | 'WARNING' 
   | 'ERROR';
 
@@ -49,6 +55,18 @@ export interface StateChangePayload {
 export interface AssetsManifestPayload {
   songs: string[];
   shows: Record<string, string[]>;
+}
+
+export interface StatusPayload {
+  state: 'IDLE' | 'LOADED' | 'PLAYING' | 'PAUSED';
+  backendTimeMs: number;
+  currentFrame: number;
+  totalFrames: number;
+  speedFactor: number;
+  scheduledStartAtTime: number | null;
+  backendStartLagMs: number | null;
+  lastSyncDriftMs: number | null;
+  isController: boolean;
 }
 
 export interface WarningPayload {
