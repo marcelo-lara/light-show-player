@@ -45,3 +45,11 @@ This module is strictly developed and deployed via Docker to ensure network and 
 ```bash
 docker compose up --build -d
 ```
+
+## Development Guidelines
+
+- **Component Organization:** Frontend React components are broken down into small, cohesive files within `frontend/src/components/`, usually organized by feature (e.g., `TopBar`, `Panels`).
+- **State Management:** Use React Contexts (e.g., `PlayerContext` in `frontend/src/contexts/`) to share global application state (like WebSocket status) and avoid prop-drilling into deeply nested presentational components.
+- **Orchestration:** Keep high-level business logic and action handlers (like Play, Pause, Stop sequences) in central orchestrators (like `App.tsx` or custom hooks) rather than tying them directly to presentational components.
+- **Utility Functions:** Extract pure helper functions (formatting, calculations) into `frontend/src/utils/` to keep component files focused strictly on UI rendering.
+- **Custom Hooks:** Encapsulate complex side-effects (like WebSocket connections) into declarative custom hooks within `frontend/src/hooks/`. 
